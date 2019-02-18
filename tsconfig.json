@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "plugins": [
+      {
+        "name": "typescript-tslint-plugin",
+        "configFile": "tslint.json"
+      }
+    ],
+    "target": "es2016",
+    "lib": [
+      "dom",
+      "es2016"
+    ],
+    "sourceMap": false,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "jsx": "preserve",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noStrictGenericChecks": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "preserveSymlinks": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    ".git",
+    "node_modules"
+  ]
+}
