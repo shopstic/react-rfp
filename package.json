@@ -1,6 +1,6 @@
 {
-  "name": "@zincora/react-rx",
-  "version": "0.1.7",
+  "name": "react-rfp",
+  "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": ["dist"],
