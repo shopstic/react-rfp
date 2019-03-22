@@ -12,8 +12,9 @@
       "dom",
       "es2016"
     ],
+    "allowJs": true,
     "sourceMap": false,
-    "declaration": true,
+    "declaration": false,
     "forceConsistentCasingInFileNames": true,
     "module": "esnext",
     "moduleResolution": "node",

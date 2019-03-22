@@ -5,13 +5,20 @@ import {
   Subject,
   Subscription,
   ConnectableObservable,
-  of,
   concat,
+  of,
 } from 'rxjs'
-import { distinctUntilChanged, filter, publishReplay, map, take, first } from 'rxjs/operators'
-import { RxComp1, IRxComp1Props, RxComp2, IRxComp2Props, RxComp3, IRxComp3Props } from './rxComp'
+import {
+  distinctUntilChanged,
+  filter,
+  publishReplay,
+  map,
+  take,
+  first,
+} from 'rxjs/operators'
+// @ts-ignore
+import RxComp from './rxComp'
 import { shallowCompare } from './compareUtils'
-import { Constructor } from './types'
 
 const STYLE_PROP = 'style'
 const CLASSES_PROP = 'classes'
@@ -93,79 +100,71 @@ export interface VdomStreamWithEffects {
   effects?: Effect[]
 }
 
-export interface IRxState {
-  vdom: ReactNode
-}
-
-export abstract class ComponentFromStream<Props> extends React.Component<Props, IRxState> {
-  private readonly props$: BehaviorSubject<Props>
-  private subscriptions: Subscription[]
-
-  constructor(props: Props) {
-    super(props)
-    this.state = { vdom: null }
-    this.subscriptions = []
-    this.props$ = new BehaviorSubject(props)
-  }
-
-  protected abstract toVdomStream(props: Observable<Props>): VdomStream | VdomStreamWithEffects
-
-  componentWillReceiveProps(nextProps: Props) {
-    this.props$.next(nextProps)
-  }
-
-  // @ts-ignore
-  shouldComponentUpdate(nextProps: Props, nextState: IRxState) {
-    return nextState.vdom !== this.state.vdom
-  }
-
-  componentWillMount() {
-    const ret = this.toVdomStream(this.props$.pipe(distinctUntilChanged(compareProps)))
-
-    const { vdom, effects } = (function() {
-      if ('vdom' in ret) {
-        return ret as VdomStreamWithEffects
-      } else {
-        return {
-          vdom: ret as VdomStream,
-        }
-      }
-    })()
-
-    this.subscriptions.push(
-      vdom.subscribe(v => {
-        this.setState({ vdom: v })
-      }),
-    )
-
-    if (Array.isArray(effects)) {
-      const subscriptions = effects.map(e => e())
-      this.subscriptions.push.apply(this.subscriptions, subscriptions)
-    }
-  }
-
-  componentWillUnmount() {
-    this.props$.complete()
-    this.subscriptions.forEach(s => s.unsubscribe())
-  }
-
-  render() {
-    return this.state.vdom
-  }
-}
-
 export function createRxComponent<Props>(
   toVdomStream: (props: Observable<Props>) => VdomStream | VdomStreamWithEffects,
-): Constructor<ComponentFromStream<Props>> {
-  class C extends ComponentFromStream<Props> {
-    toVdomStream(props: Observable<Props>) {
-      return toVdomStream(props)
+): React.ComponentType<Props> {
+  interface IState {
+    vdom: ReactNode
+  }
+
+  class ComponentFromStream extends React.Component<Props, IState> {
+    private readonly props$: BehaviorSubject<Props>
+    private subscriptions: Subscription[]
+
+    constructor(props: Props) {
+      super(props)
+      this.state = { vdom: null }
+      this.subscriptions = []
+      this.props$ = new BehaviorSubject(props)
+    }
+
+    componentWillReceiveProps(nextProps: Props) {
+      this.props$.next(nextProps)
+    }
+
+    // @ts-ignore
+    shouldComponentUpdate(nextProps: Props, nextState: IState) {
+      return nextState.vdom !== this.state.vdom
+    }
+
+    componentWillMount() {
+      const ret = toVdomStream(this.props$.pipe(distinctUntilChanged(compareProps)))
+
+      const { vdom, effects } = (function() {
+        if ('vdom' in ret) {
+          return ret as VdomStreamWithEffects
+        } else {
+          return {
+            vdom: ret as VdomStream,
+          }
+        }
+      })()
+
+      this.subscriptions.push(
+        vdom.subscribe(v => {
+          this.setState({ vdom: v })
+        }),
+      )
+
+      if (Array.isArray(effects)) {
+        const subscriptions = effects.map(e => e())
+        this.subscriptions.push.apply(this.subscriptions, subscriptions)
+      }
+    }
+
+    componentWillUnmount() {
+      this.props$.complete()
+      this.subscriptions.forEach(s => s.unsubscribe())
+    }
+
+    render() {
+      return this.state.vdom
     }
   }
 
   // @ts-ignore
-  C.displayName = toVdomStream.name
-  return C
+  ComponentFromStream.displayName = toVdomStream.name
+  return ComponentFromStream
 }
 
 export function createHandler0(life: Observable<any>): [() => void, Subject<any>] {
@@ -265,7 +264,6 @@ function rememberLast<T>(o: Observable<T>): [Observable<T>, () => void] {
 }
 
 export function createRx1<O1>(o1: Observable<O1>) {
-  class Comp extends RxComp1<O1> {}
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
 
@@ -279,16 +277,15 @@ export function createRx1<O1>(o1: Observable<O1>) {
 
     const ret: [(render: (o1: O1) => ReactNode) => ReactNode, Observable<O1>] = [
       function(render: (o1: O1) => ReactNode) {
-        const props: IRxComp1Props<O1> = {
+        return React.createElement(RxComp, {
           o1: p1,
-          render(value) {
-            if (value === undefined) {
+          render(s: any) {
+            if (!('o1' in s)) {
               return null
             }
-            return render(value)
+            return render(s.o1)
           },
-        }
-        return React.createElement(Comp, props)
+        })
       },
       p1,
     ]
@@ -298,7 +295,6 @@ export function createRx1<O1>(o1: Observable<O1>) {
 }
 
 export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
-  class Comp extends RxComp2<O1, O2> {}
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
     const [p2, c2] = rememberLast(o2)
@@ -318,17 +314,16 @@ export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
       Observable<O2>
     ] = [
       function(render: (o1: O1, o2: O2) => ReactNode) {
-        const props: IRxComp2Props<O1, O2> = {
+        return React.createElement(RxComp, {
           o1: p1,
           o2: p2,
-          render(value1, value2) {
-            if (value1 === undefined || value2 === undefined) {
+          render(s: any) {
+            if (!('o1' in s) || !('o2' in s)) {
               return null
             }
-            return render(value1, value2)
+            return render(s.o1, s.o2)
           },
-        }
-        return React.createElement(Comp, props)
+        })
       },
       p1,
       p2,
@@ -339,7 +334,6 @@ export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
 }
 
 export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3: Observable<O3>) {
-  class Comp extends RxComp3<O1, O2, O3> {}
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
     const [p2, c2] = rememberLast(o2)
@@ -362,18 +356,17 @@ export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3
       Observable<O3>
     ] = [
       function(render: (o1: O1, o2: O2, o3: O3) => ReactNode) {
-        const props: IRxComp3Props<O1, O2, O3> = {
+        return React.createElement(RxComp, {
           o1: p1,
           o2: p2,
           o3: p3,
-          render(value1, value2, value3) {
-            if (value1 === undefined || value2 === undefined || value3 === undefined) {
+          render(s: any) {
+            if (!('o1' in s) || !('o2' in s) || !('o3' in s)) {
               return null
             }
-            return render(value1, value2, value3)
+            return render(s.o1, s.o2, s.o3)
           },
-        }
-        return React.createElement(Comp, props)
+        })
       },
       p1,
       p2,
@@ -386,7 +379,6 @@ export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3
 
 // React.ChangeEventHandler<T>
 type RxInputRender<V, E> = (value: V, onChange: (e: E) => void) => ReactNode
-
 export function rxControlledInput<V, E>(
   getValue: (e: E) => V,
   life: Observable<any>,
@@ -408,11 +400,27 @@ export function rxControlledInput<V, E>(
   ]
 }
 
-export function rxInput(life: Observable<any>, startValue: string = '') {
+export function rxInput(life: Observable<any>, startValue$: Observable<string> = of('')) {
   return rxControlledInput<string, ChangeEvent<HTMLInputElement>>(
     e => e.target.value,
     life,
-    of(startValue),
+    startValue$,
+  )
+}
+
+export function rxSwitch(life: Observable<any>, startValue$: Observable<boolean> = of(false)) {
+  return rxControlledInput<boolean, ChangeEvent<HTMLInputElement>>(
+    e => e.target.checked,
+    life,
+    startValue$,
+  )
+}
+
+export function rxSelect(life: Observable<any>, startValue$: Observable<string> = of('')) {
+  return rxControlledInput<string, ChangeEvent<HTMLSelectElement>>(
+    e => e.target.value,
+    life,
+    startValue$,
   )
 }
 
@@ -427,22 +435,6 @@ export function rxInputFromProps<PropsType>(
       first(),
       map(mapper),
     ),
-  )
-}
-
-export function rxSwitch(life: Observable<any>, startValue: boolean = false) {
-  return rxControlledInput<boolean, ChangeEvent<HTMLInputElement>>(
-    e => e.target.checked,
-    life,
-    of(startValue),
-  )
-}
-
-export function rxSelect(life: Observable<any>, startValue: string = '') {
-  return rxControlledInput<string, ChangeEvent<HTMLSelectElement>>(
-    e => e.target.value,
-    life,
-    of(startValue),
   )
 }
 
