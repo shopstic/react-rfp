@@ -20,11 +20,13 @@
     "tslint": "^5.16.0",
     "tslint-config-prettier": "^1.17.0",
     "tslint-react": "^4.0.0",
+    "typedoc": "^0.14.2",
     "typescript": "3.4.5",
     "typescript-tslint-plugin": "^0.3.1"
   },
   "scripts": {
-    "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false"
+    "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false",
+    "docgen": "rm -rf docgen && ./node_modules./.bin/typedoc --out docgen ./src"
   },
   "lint-staged": {
     "src/**/**/*.{ts,tsx}": [
