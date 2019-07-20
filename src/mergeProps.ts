@@ -1,13 +1,23 @@
 import { mergeStyles } from './mergeStyles'
 import { mergeFunctions } from './mergeFunctions'
-// @ts-ignore
 import classnames from 'classnames'
 
 const STYLE_PROP = 'style'
 const CLASSNAME_PROP = 'className'
 const FUNCTION_TYPE = 'function'
 
-export function mergeProps(...propSets: any[]) {
+interface PropObject {
+  [key: string]: any
+}
+
+/**
+ * Merges multi sets of props into a single object. Has special handling to merge
+ * styles, classnames and functions to ensure they are aggregated. If keys clash, priority
+ * is given to those at the end.
+ * @param propSets
+ * @returns The merged props.
+ */
+export function mergeProps(...propSets: PropObject[]) {
   return propSets.reduce((merged, props) => {
     for (const key in props) {
       const value = props[key]

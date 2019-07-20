@@ -15,6 +15,7 @@
     "rxjs": "^6.5.1"
   },
   "devDependencies": {
+    "@types/classnames": "^2.2.9",
     "lint-staged": "^8.1.5",
     "prettier": "^1.17.0",
     "tslint": "^5.16.0",
@@ -26,7 +27,7 @@
   },
   "scripts": {
     "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false",
-    "docgen": "rm -rf docgen && ./node_modules./.bin/typedoc --out docgen ./src"
+    "docgen": "rm -rf docgen && ./node_modules./.bin/typedoc --out docgen --excludePrivate --excludeNotExported --excludeExternals ./src"
   },
   "lint-staged": {
     "src/**/**/*.{ts,tsx}": [

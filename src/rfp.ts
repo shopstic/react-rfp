@@ -1,4 +1,5 @@
 import React, { ReactNode, ChangeEvent } from 'react'
+import { isDate } from './compareUtilsInternal'
 import {
   BehaviorSubject,
   Observable,
@@ -8,56 +9,13 @@ import {
   concat,
   of,
 } from 'rxjs'
-import {
-  distinctUntilChanged,
-  filter,
-  publishReplay,
-  map,
-  take,
-  first,
-} from 'rxjs/operators'
+import { distinctUntilChanged, filter, publishReplay, map, take, first } from 'rxjs/operators'
 // @ts-ignore
 import RxComp from './rxComp'
-import { shallowCompare } from './compareUtils'
+import { shallowCompare, deepEquals } from './compareUtils'
 
 const STYLE_PROP = 'style'
 const CLASSES_PROP = 'classes'
-const DATE_TYPE = '[object Date]'
-
-function isDate(value: any) {
-  return Object.prototype.toString.call(value) === DATE_TYPE
-}
-
-function equals(origin: any, target: any): boolean {
-  const originType = typeof origin
-  const targetType = typeof target
-
-  if (originType === targetType) {
-    if (originType === 'object') {
-      for (const key in origin) {
-        if (!(key in target)) {
-          return false
-        }
-
-        if (!equals(origin[key], target[key])) {
-          return false
-        }
-      }
-
-      for (const key in target) {
-        if (!(key in origin)) {
-          return false
-        }
-      }
-
-      return true
-    } else {
-      return origin === target
-    }
-  }
-
-  return false
-}
 
 function compareProps(prev: any, next: any) {
   const keys = Object.keys(next)
@@ -72,7 +30,7 @@ function compareProps(prev: any, next: any) {
     const nextValue = next[key]
 
     if (key === STYLE_PROP || key === CLASSES_PROP) {
-      if (!equals(nextValue, prevValue)) {
+      if (!deepEquals(nextValue, prevValue)) {
         return false
       }
     } else if (
