@@ -1,6 +1,5 @@
 import { mergeStyles } from './mergeStyles'
 import { mergeFunctions } from './mergeFunctions'
-// @ts-ignore
 import classnames from 'classnames'
 
 const STYLE_PROP = 'style'
