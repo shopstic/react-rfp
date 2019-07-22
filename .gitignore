@@ -1,6 +1,7 @@
 node_modules
 .vscode
 dist
+docgen
 
 # misc
 .DS_Store

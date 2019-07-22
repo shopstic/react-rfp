@@ -1,24 +1,29 @@
 const NUMBER_TYPE = 'number'
 const UNDEFINED_TYPE = 'undefined'
 
-export function mergeStyles(currentStyle: any, style: any) {
-  const currentStyleType = typeof currentStyle
+/**
+ * Merges two style sets together. Precedence is given to the second style.
+ * @param style1 The first style.
+ * @param style2 The second style.
+ */
+export function mergeStyles(style1: any, style2: any) {
+  const style1Type = typeof style1
 
-  if (currentStyle === null || currentStyleType === UNDEFINED_TYPE) {
-    return style
+  if (style1 === null || style1Type === UNDEFINED_TYPE) {
+    return style2
   }
 
-  if (Array.isArray(currentStyle)) {
-    return currentStyle.concat(style)
+  if (Array.isArray(style1)) {
+    return style1.concat(style2)
   }
 
-  if (Array.isArray(style)) {
-    return [currentStyle].concat(style)
+  if (Array.isArray(style2)) {
+    return [style1].concat(style2)
   }
 
-  if (currentStyleType === NUMBER_TYPE || typeof style === NUMBER_TYPE) {
-    return [currentStyle, style]
+  if (style1Type === NUMBER_TYPE || typeof style2 === NUMBER_TYPE) {
+    return [style1, style2]
   }
 
-  return Object.assign({}, currentStyle, style)
+  return Object.assign({}, style1, style2)
 }

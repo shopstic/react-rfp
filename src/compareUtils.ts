@@ -1,66 +1,92 @@
 const DATE_TYPE = '[object Date]'
 
-function isDate(value: any) {
+/**
+ * Checks if the value is date.
+ * @param value The value.
+ * @returns `true` if the value is a date.
+ */
+export function isDate(value: any) {
   return Object.prototype.toString.call(value) === DATE_TYPE
 }
 
-export function deepEquals(origin: any, target: any): boolean {
-  const originType = typeof origin
-  const targetType = typeof target
+/**
+ * Compares if two values are equal using a deep equality check.
+ * If the values are objects, each key will be checked against the target,
+ * object references will be traversed recursively. Arrays will only be
+ * compared by reference.
+ * @param value1 The first value.
+ * @param value2 The second value.
+ * @returns `true` if the values are considered equal.
+ */
+export function deepEquals(value1: any, value2: any): boolean {
+  const v1Type = typeof value1
+  const v2Type = typeof value2
 
-  if (originType === targetType) {
-    if (originType === 'object') {
-      for (const key in origin) {
-        if (!(key in target)) {
-          return false
-        }
-
-        if (!deepEquals(origin[key], target[key])) {
-          return false
-        }
-      }
-
-      for (const key in target) {
-        if (!(key in origin)) {
-          return false
-        }
-      }
-
-      return true
-    } else {
-      return origin === target
-    }
+  if (v1Type !== v2Type) {
+    return false
   }
 
-  return false
+  if (v1Type === 'object') {
+    if (isDate(origin)) {
+      return isDate(value2) ? value1.getTime() === value2.getTime() : false
+    }
+
+    for (const key in value1) {
+      if (!(key in value2)) {
+        return false
+      }
+
+      if (!deepEquals(value1[key], value2[key])) {
+        return false
+      }
+    }
+
+    for (const key in value2) {
+      if (!(key in value1)) {
+        return false
+      }
+    }
+
+    return true
+  } else {
+    return origin === value2
+  }
 }
 
-export function shallowCompare(x: any, y: any): boolean {
-  if (isDate(x) && isDate(y)) {
-    return x.getTime() === y.getTime()
+/**
+ * Compares if two values are equal using a shallow equality check.
+ * If the values are objects, a shallow comparison is performed on the keys of
+ * the object. Arrays are not supported. See also: [[deepEquals]]
+ * @param value1 The first value.
+ * @param value2 The second value.
+ * @returns `true` if the values are equal.
+ */
+export function shallowCompare(value1: any, value2: any): boolean {
+  if (isDate(value1) && isDate(value2)) {
+    return value1.getTime() === value2.getTime()
   }
 
-  if (x === null || y === null) {
-    return x === y
+  if (value1 === null || value2 === null) {
+    return value1 === value2
   }
 
-  if (typeof x !== 'object' || typeof y !== 'object') {
-    return x === y
+  if (typeof value1 !== 'object' || typeof value2 !== 'object') {
+    return value1 === value2
   }
 
-  const keys = Object.keys(x)
+  const keys = Object.keys(value1)
 
-  if (keys.length !== Object.keys(y).length) {
+  if (keys.length !== Object.keys(value2).length) {
     return false
   }
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    const xv = x[key]
-    const yv = y[key]
+    const xv = value1[key]
+    const yv = value2[key]
 
-    if (isDate(x) && isDate(y)) {
-      if (x.getTime() !== y.getTime()) {
+    if (isDate(value1) && isDate(value2)) {
+      if (value1.getTime() !== value2.getTime()) {
         return false
       }
     } else if (xv !== yv) {

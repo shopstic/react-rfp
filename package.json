@@ -22,11 +22,13 @@
     "tslint": "^5.16.0",
     "tslint-config-prettier": "^1.17.0",
     "tslint-react": "^4.0.0",
+    "typedoc": "^0.14.2",
     "typescript": "^3.5.3",
     "typescript-tslint-plugin": "^0.5.4"
   },
   "scripts": {
-    "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false"
+    "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false",
+    "docgen": "rm -rf docgen && ./node_modules./.bin/typedoc --out docgen --excludePrivate --excludeNotExported --excludeExternals ./src"
   },
   "lint-staged": {
     "src/**/**/*.{ts,tsx}": [
