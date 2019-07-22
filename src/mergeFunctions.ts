@@ -3,7 +3,7 @@
  * will execute the constituent functions in sequence. Any non-function
  * values will be ignored.
  *
- * @param functions
+ * @param functions The function to merge.
  * @returns A function that will call constituent functions in sequence. If no
  * valid functions are passed, `undefined` is returned.
  */

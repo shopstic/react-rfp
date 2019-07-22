@@ -14,7 +14,7 @@ interface PropObject {
  * Merges multi sets of props into a single object. Has special handling to merge
  * styles, classnames and functions to ensure they are aggregated. If keys clash, priority
  * is given to those at the end.
- * @param propSets
+ * @param propSets The props to merge.
  * @returns The merged props.
  */
 export function mergeProps(...propSets: PropObject[]) {

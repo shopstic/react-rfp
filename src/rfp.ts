@@ -1,5 +1,5 @@
 import React, { ReactNode, ChangeEvent } from 'react'
-import { isDate } from './compareUtilsInternal'
+import { isDate } from './compareUtils'
 import {
   BehaviorSubject,
   Observable,
@@ -51,13 +51,39 @@ function compareProps(prev: any, next: any) {
   return true
 }
 
+/**
+ * The observable that wraps the React node.
+ */
 export type VdomStream = Observable<ReactNode>
+
+/**
+ * A function that creates the necessary subscriptions
+ * to perform a side effect
+ */
 export type Effect = () => Subscription
+
+/**
+ * Represents a Rx Component along with any effects.
+ */
 export interface VdomStreamWithEffects {
+  /**
+   * The node
+   */
   vdom: VdomStream
+
+  /**
+   * The effects
+   */
   effects?: Effect[]
 }
 
+/**
+ * A factory function for creating a Rx component.
+ * @param toVdomStream The function that transforms the props observable
+ * into a React component.
+ *
+ * @returns The component type.
+ */
 export function createRxComponent<Props>(
   toVdomStream: (props: Observable<Props>) => VdomStream | VdomStreamWithEffects,
 ): React.ComponentType<Props> {
@@ -125,7 +151,13 @@ export function createRxComponent<Props>(
   return ComponentFromStream
 }
 
-export function createHandler0(life: Observable<any>): [() => void, Subject<any>] {
+/**
+ * Creates a handler with no value that is tied to the lifetime of the passed observable.
+ * Will be unbound when the `life` is complete.
+ * @param life The lifetime to bind to.
+ * @returns A setter to advance the value and the observable to subscribe to.
+ */
+export function createHandler0(life: Observable<any>): [() => void, Observable<any>] {
   const subject = new Subject<any>()
   life.subscribe({
     complete() {
@@ -140,7 +172,13 @@ export function createHandler0(life: Observable<any>): [() => void, Subject<any>
   ]
 }
 
-export function createHandler<E>(life: Observable<any>): [(e: E) => void, Subject<E>] {
+/**
+ * Creates a handler with 1 value that is tied to the lifetime of the passed observable.
+ * Will be unbound when the `life` is complete.
+ * @param life The lifetime to bind to.
+ * @returns A setter to advance the value and the observable to subscribe to.
+ */
+export function createHandler<E>(life: Observable<any>): [(e: E) => void, Observable<E>] {
   const subject = new Subject<E>()
   life.subscribe({
     complete() {
@@ -155,9 +193,15 @@ export function createHandler<E>(life: Observable<any>): [(e: E) => void, Subjec
   ]
 }
 
+/**
+ * Creates a handler with 2 values that is tied to the lifetime of the passed observable.
+ * Will be unbound when the `life` is complete.
+ * @param life The lifetime to bind to.
+ * @returns A setter to advance the value and the observable to subscribe to.
+ */
 export function createHandler2<A, B>(
   life: Observable<any>,
-): [(a: A, b: B) => void, Subject<[A, B]>] {
+): [(a: A, b: B) => void, Observable<[A, B]>] {
   const subject = new Subject<[A, B]>()
   life.subscribe({
     complete() {
@@ -171,18 +215,31 @@ export function createHandler2<A, B>(
     subject,
   ]
 }
+
+/**
+ * An operator that filters out `undefined` values.
+ */
 export function defined<T>(): (source: Observable<T | undefined>) => Observable<T> {
   return function(source: Observable<T | undefined>) {
     return source.pipe(filter(u => u !== undefined)) as Observable<T>
   }
 }
 
+/**
+ * An operator that filters out `undefined` values.
+ */
 export function notNull<T>(): (source: Observable<T | null>) => Observable<T> {
   return function(source: Observable<T | null>) {
     return source.pipe(filter(u => u !== null)) as Observable<T>
   }
 }
 
+/**
+ * Ensures the passed observable is a `ConnectableObservable`.
+ * Used to work around this issue: https://github.com/ReactiveX/rxjs/issues/2972
+ * @param o The observable
+ * @returns The `ConnectableObservable`
+ */
 export function asConnectable<T>(o: Observable<T>): ConnectableObservable<T> {
   if (process.env.NODE_ENV !== 'production') {
     if (!('connect' in o)) {
@@ -192,6 +249,12 @@ export function asConnectable<T>(o: Observable<T>): ConnectableObservable<T> {
   return o as any
 }
 
+/**
+ * A factory function for creating side-effect that is tied to the lifetime
+ * of the passed observable.
+ * @param effect The creator of the effect.
+ * @returns The function
+ */
 export function createEffect(effect: () => Subscription) {
   return function(life: Observable<any>) {
     let sub: Subscription | null = null
@@ -221,6 +284,13 @@ function rememberLast<T>(o: Observable<T>): [Observable<T>, () => void] {
   return [p, () => sub.unsubscribe()]
 }
 
+/**
+ * Creates a renderer factory for a controlled standalone component that will render
+ * when the value changes. The lifetime of this component is bound to the
+ * inner observable.
+ * @param o1 The observable that is the source of the value.
+ * @returns The rendering function and the observable that represents the current value.
+ */
 export function createRx1<O1>(o1: Observable<O1>) {
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
@@ -252,6 +322,14 @@ export function createRx1<O1>(o1: Observable<O1>) {
   }
 }
 
+/**
+ * Creates a renderer factory for a controlled  standalone component that will render
+ * when the values change. The lifetime of this component is bound to the
+ * inner observable.
+ * @param o1 The observable that is the source of the first value.
+ * @param o2 The observable that is the source of the second value.
+ * @returns The rendering function and the observable that represents the current value.
+ */
 export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
@@ -291,6 +369,15 @@ export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
   }
 }
 
+/**
+ * Creates a renderer factory for a controlled  standalone component that will render
+ * when the values change. The lifetime of this component is bound to the
+ * inner observable.
+ * @param o1 The observable that is the source of the first value.
+ * @param o2 The observable that is the source of the second value.
+ * @param o3 The observable that is the source of the third value.
+ * @returns The rendering function and the observable that represents the current value.
+ */
 export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3: Observable<O3>) {
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
@@ -337,6 +424,14 @@ export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3
 
 // React.ChangeEventHandler<T>
 type RxInputRender<V, E> = (value: V, onChange: (e: E) => void) => ReactNode
+
+/**
+ * Helper function that use [[createRx1]] for a controlled input field.
+ * @param getValue The function to map from the event to the value
+ * @param life The observable to control the lifetime of this component.
+ * @param startValue$ The initial value.
+ * @returns A rendering function and an observable that represents the current value.
+ */
 export function rxControlledInput<V, E>(
   getValue: (e: E) => V,
   life: Observable<any>,
@@ -358,6 +453,11 @@ export function rxControlledInput<V, E>(
   ]
 }
 
+/**
+ * Helper function to create a controlled input for a text value. See [[rxControlledInput]]
+ * @param life The observable to control the lifetime of this component.
+ * @param startValue$ The initial value.
+ */
 export function rxInput(life: Observable<any>, startValue$: Observable<string> = of('')) {
   return rxControlledInput<string, ChangeEvent<HTMLInputElement>>(
     e => e.target.value,
@@ -366,6 +466,11 @@ export function rxInput(life: Observable<any>, startValue$: Observable<string> =
   )
 }
 
+/**
+ * Helper function to create a controlled input for a checkbox value. See [[rxControlledInput]]
+ * @param life The observable to control the lifetime of this component.
+ * @param startValue$ The initial value.
+ */
 export function rxSwitch(life: Observable<any>, startValue$: Observable<boolean> = of(false)) {
   return rxControlledInput<boolean, ChangeEvent<HTMLInputElement>>(
     e => e.target.checked,
@@ -374,6 +479,11 @@ export function rxSwitch(life: Observable<any>, startValue$: Observable<boolean>
   )
 }
 
+/**
+ * Helper function to create a controlled input for a select value. See [[rxControlledInput]]
+ * @param life The observable to control the lifetime of this component.
+ * @param startValue$ The initial value.
+ */
 export function rxSelect(life: Observable<any>, startValue$: Observable<string> = of('')) {
   return rxControlledInput<string, ChangeEvent<HTMLSelectElement>>(
     e => e.target.value,
@@ -382,6 +492,12 @@ export function rxSelect(life: Observable<any>, startValue$: Observable<string> 
   )
 }
 
+/**
+ * Helper function to create a controlled input for a text field with the initial value
+ * coming from the props of the outer component. See [[rxControlledInput]]
+ * @param props The outer props.
+ * @param mapper The mapping function to transform the props to a value
+ */
 export function rxInputFromProps<PropsType>(
   props: Observable<PropsType>,
   mapper: (props: PropsType) => string,
@@ -396,10 +512,20 @@ export function rxInputFromProps<PropsType>(
   )
 }
 
+/**
+ * An operator that does a shallow object comparison for changes.
+ */
 export function distinctUntilActuallyChanged() {
   return distinctUntilChanged(shallowCompare)
 }
 
+/**
+ * Takes the passed observable and publishes the value when
+ * the component first mounts. Ties the lifetime to
+ * the passed observable.
+ * @param life The lifetime.
+ * @returns The transofmration function to complete publish.
+ */
 export function publishOnMount<T>(life: Observable<any>) {
   // notice that we return a function here
   return function(source: Observable<T>) {
@@ -424,6 +550,11 @@ export function publishOnMount<T>(life: Observable<any>) {
   }
 }
 
+/**
+ * Factory for memoize an observable value.
+ * @param init The function to initialize the value.
+ * @returns The function to get or calculate the memoized value.
+ */
 export function memoizeObservable<T>(init: () => Observable<T>) {
   let value: Observable<T> | null = null
 
