@@ -1,13 +1,23 @@
 # react-rfp
-Utilities to assist with using RxJS and React.
+Utilities to assist with using RxJS, TypeScript and React.
+
+## Why Reactive Programming
+Reactive programming focuses on manipulating asynchronous streams to produce results. In a web application, a majority of the interactive work is dealing with asynchronous streams, including:
+- DOM events/gestures
+- Animations
+- Ajax/Sockets
+
+No matter the source, the streams all follow the same API. Another powerful benefit (the functional part) is that these streams can be composed in all kinds of ways to achieve sophisticated results by mapping streams into other streams using a set of operators.
+
+Reactive programming is also conducive to using immutable data structures, which is a good fit for the functional programming paradigm.
 
 ## Main Goals
 This library serves 2 main purposes:
 
-#### Rx Integration
+### Rx Integration
 Reactive programming (Rx) fits well with React development paradigm. This library aims to provide utility to do common tasks easily and provide a simpler experience that allows users to take advantage of using Rx with React.
 
-#### Optimization
+### Optimization
 This library bypasses the default state management offered by React. It provides an alternative approach that allows for isolated component rendering. State changes that would typically cause an entire component to re-render can be narrowed down to specific component areas.
 
 ## Core Concepts
@@ -49,12 +59,12 @@ First, note that we pass the `props$` to `createHandler`. This is to tie the lif
 
 Secondly, we are given two things in return:
 - A function that we can use as a change handler. In this case, we will use it in conjunction with a text field.
-- An observable that stores the change events.\
+- An observable that stores the change events.
 
 Now let's do something with the value.
 
 ```tsx
-const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$) {
+const Component = createRxComponent<IGreeterProps>(function Greeter(props$) {
   const [onNameChange, name$] = createHandler<ChangeEvent<HTMLInputElement>>(props$)
 
   // Take the value from the event.
@@ -103,7 +113,7 @@ It returns two values:
 Let's see it in action:
 
 ```tsx
-const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$) {
+const Component = createRxComponent<IGreeterProps>(function Greeter(props$) {
   const [onNameChange, name$] = createHandler<ChangeEvent<HTMLInputElement>>(props$)
   const [withName] = createRx1(
     name$.pipe(
@@ -135,7 +145,39 @@ const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$
 })
 ```
 
-The functionality is the same, except for one difference. Note that as you change the text field, the entire component no longer re-renders. Rather, only the portion depending on the name value is executed. This highlights the power of these isolated components as a performance tool.
+The functionality is the same, except for one difference. Note that as you change the text field, the entire component no longer re-renders. Rather, only the portion depending on the name value is executed. This highlights the power of these isolated components as a performance tool. They are also a benefit from a code organization point of view, since these isolated components can easily be pulled out into their blocks:
+
+```tsx
+const createNameComp = (props$: Observable<IGreeterProps>): React.ReactNode => {
+  const [onNameChange, name$] = createHandler<ChangeEvent<HTMLInputElement>>(props$)
+  const [withName] = createRx1(
+    name$.pipe(
+      withLatestFrom(props$),
+      map(([e, props]) => tuple(e.target.value, props.greeting)),
+      startWith(tuple('', '')),
+    ),
+  )(props$)
+
+  return withName(([name, greeting]) => (
+    <>
+      <input value={name} onChange={onNameChange} />
+      <div>
+        {greeting} {name}!
+      </div>
+    </>
+  ))
+}
+
+const Component = createRxComponent<IGreeterProps>(function Greeter(props$) {
+  const nameComp = createNameComp(props$)
+  return props$.pipe(
+    map(() => (<div>
+      {/* A bunch of other complicated components*/}
+      {nameComp}
+    </div>)),
+  )
+})
+```
 
 ### `createEffect`
 An effect is an action that doesn't contribute to the rendering of the current component. Some examples might are:
@@ -160,12 +202,12 @@ Also note passing `props$` to handle the lifetime of the effect.
 Let's use `createEffect` in our sample component. We'll modify the props to take a submit function from the parent.
 
 ```tsx
-interface IHelloWorldProps {
+interface IGreeterProps {
   greeting: string
   onSubmit: (name: string) => void
 }
 
-const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$) {
+const Component = createRxComponent<IGreeterProps>(function Greeter(props$) {
   const [onNameChange, name$] = createHandler<ChangeEvent<HTMLInputElement>>(props$)
   const [withName, nameValue$] = createRx1(
     name$.pipe(
@@ -224,7 +266,7 @@ There are several utility functions that provide some shortcuts for writing boil
 
 `rxInput`, which helps to deal with text inputs:
 ```tsx
-const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$) {
+const Component = createRxComponent<IGreeterProps>(function Greeter(props$) {
   const [withName, name$] = rxInput(props$, of(''))
 
   return props$.pipe(
@@ -234,6 +276,56 @@ const Component = createRxComponent<IHelloWorldProps>(function HelloWorld(props$
 ```
 
 There are other utility functions such as `rxSwitch` and `rxSelect` to deal with other input types.
+
+### Hot and Cold
+Observables in Rx behave in two different ways. Observables default (in most cases) to being cold.
+
+#### Cold
+A cold observable does not emit any events if there are no subscribers. Each subscriber is given the entire set of values from start to end. Think of it like watching a video file. Each user who wants to watch it can start the video from the beginning and watch it through til the end in their own time.
+
+#### Hot
+A hot observable emits events even if there are no subscribers. Each subscriber is only given values that emit after they have subscribed. Think of it like watching a live stream. The stream is playing no matter who is watching. Users can only see content for the time they are tuned in.
+
+#### Implications
+Hot observables are used when the thing producing the events is outside of the observable. Hot observables also allow the same stream to be multicast to multiple subscribers. Any `createRx` observables are hot by default.
+
+#### `publishOnMount`
+This library includes a helper function to turn cold observables to hot. They help to ensure that:
+- The observable only begins emitting once the component has first mounted.
+- The value of the observable is shared amongst all subscribers.
+
+You typically want to use this for things like remote requests, or when subscribing multiple times to an observable. In the following snippet of code, compare the behavior with and without `publishOnMount`.
+
+```tsx
+const startIndex$ = new Subject<number>()
+const endIndex$ = new Subject<number>()
+
+setInterval(() => {
+  startIndex$.next(Math.random())
+}, 4000)
+
+setTimeout(() => {
+  endIndex$.next(Math.random())
+}, 5000)
+
+const totalBetweenDatesFakeRemote = (startIndex: number, endIndex: number): Observable<number> => {
+  console.log('invoking remote call')
+  return of(Math.random() + (startIndex + endIndex) / 2).pipe(delay(1000))
+}
+
+const result$ = combineLatest(startIndex$, endIndex$).pipe(
+  switchMap(([start, end]) => totalBetweenDatesFakeRemote(start, end)),
+  publishOnMount(props$),
+)
+
+result$.subscribe(v => {
+  console.log('first', v)
+})
+
+result$.subscribe(v => {
+  console.log('second', v)
+})
+```
 
 ### When Not To Use Rx Features
 Typically, Rx features aren't needed for stateless components:
