@@ -19,7 +19,7 @@ class RxComp extends React.Component {
     this.subscriptions[k] = [o.subscribe(this.onNext.bind(this, k))]
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
     const keys = Object.keys(nextProps).filter(k => k !== 'render')
     const currentProps = this.props
 

@@ -102,7 +102,7 @@ export function createRxComponent<Props>(
       this.props$ = new BehaviorSubject(props)
     }
 
-    componentWillReceiveProps(nextProps: Props) {
+    UNSAFE_componentWillReceiveProps(nextProps: Props) {
       this.props$.next(nextProps)
     }
 
@@ -111,7 +111,7 @@ export function createRxComponent<Props>(
       return nextState.vdom !== this.state.vdom
     }
 
-    componentWillMount() {
+    UNSAFE_componentWillMount() {
       const ret = toVdomStream(this.props$.pipe(distinctUntilChanged(compareProps)))
 
       const { vdom, effects } = (function() {
@@ -347,7 +347,7 @@ export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
     const ret: [
       (render: (o1: O1, o2: O2) => ReactNode) => ReactNode,
       Observable<O1>,
-      Observable<O2>
+      Observable<O2>,
     ] = [
       function(render: (o1: O1, o2: O2) => ReactNode) {
         return React.createElement(RxComp, {
@@ -398,7 +398,7 @@ export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3
       (render: (o1: O1, o2: O2, o3: O3) => ReactNode) => ReactNode,
       Observable<O1>,
       Observable<O2>,
-      Observable<O3>
+      Observable<O3>,
     ] = [
       function(render: (o1: O1, o2: O2, o3: O3) => ReactNode) {
         return React.createElement(RxComp, {
