@@ -34,7 +34,7 @@
     "typescript-tslint-plugin": "^0.5.4"
   },
   "scripts": {
-    "build": "rm -Rf dist && ./node_modules/.bin/tsc && ./node_modules/.bin/tsc -d --emitDeclarationOnly --allowJs false",
+    "build": "rm -Rf dist && ./node_modules/.bin/tsc",
     "docgen": "rm -rf docgen && ./node_modules./.bin/typedoc --out docgen --excludePrivate --excludeNotExported --excludeExternals ./src"
   },
   "lint-staged": {

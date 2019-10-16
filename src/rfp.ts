@@ -11,7 +11,7 @@ import {
 } from 'rxjs'
 import { distinctUntilChanged, filter, publishReplay, map, take, first } from 'rxjs/operators'
 // @ts-ignore
-import RxComp from './rxComp'
+import { RxComp1, IRxComp1Props, RxComp2, IRxComp2Props, RxComp3, IRxComp3Props } from './rxComp'
 import { shallowCompare, deepEquals } from './compareUtils'
 
 const STYLE_PROP = 'style'
@@ -284,6 +284,18 @@ function rememberLast<T>(o: Observable<T>): [Observable<T>, () => void] {
   return [p, () => sub.unsubscribe()]
 }
 
+function completeIf(life: Observable<any>, ...fns: Array<() => void>) {
+  if (fns.some(f => f !== noop)) {
+    life.subscribe({
+      complete() {
+        for (const f of fns) {
+          f()
+        }
+      },
+    })
+  }
+}
+
 /**
  * Creates a renderer factory for a controlled standalone component that will render
  * when the value changes. The lifetime of this component is bound to the
@@ -292,29 +304,19 @@ function rememberLast<T>(o: Observable<T>): [Observable<T>, () => void] {
  * @returns The rendering function and the observable that represents the current value.
  */
 export function createRx1<O1>(o1: Observable<O1>) {
+  class Comp extends RxComp1<O1> {}
+
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
 
-    if (c1 !== noop) {
-      life.subscribe({
-        complete() {
-          c1()
-        },
-      })
-    }
+    completeIf(life, c1)
 
     const ret: [(render: (o1: O1) => ReactNode) => ReactNode, Observable<O1>] = [
-      function(render: (o1: O1) => ReactNode) {
-        return React.createElement(RxComp, {
+      (render: (o1: O1) => ReactNode) =>
+        React.createElement(Comp, {
           o1: p1,
-          render(s: any) {
-            if (!('o1' in s)) {
-              return null
-            }
-            return render(s.o1)
-          },
-        })
-      },
+          render: value => render(value),
+        }),
       p1,
     ]
 
@@ -331,36 +333,24 @@ export function createRx1<O1>(o1: Observable<O1>) {
  * @returns The rendering function and the observable that represents the current value.
  */
 export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
+  class Comp extends RxComp2<O1, O2> {}
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
     const [p2, c2] = rememberLast(o2)
 
-    if (c1 !== noop || c2 !== noop) {
-      life.subscribe({
-        complete() {
-          c1()
-          c2()
-        },
-      })
-    }
+    completeIf(life, c1, c2)
 
     const ret: [
       (render: (o1: O1, o2: O2) => ReactNode) => ReactNode,
       Observable<O1>,
       Observable<O2>,
     ] = [
-      function(render: (o1: O1, o2: O2) => ReactNode) {
-        return React.createElement(RxComp, {
+      (render: (o1: O1, o2: O2) => ReactNode) =>
+        React.createElement(Comp, {
           o1: p1,
           o2: p2,
-          render(s: any) {
-            if (!('o1' in s) || !('o2' in s)) {
-              return null
-            }
-            return render(s.o1, s.o2)
-          },
-        })
-      },
+          render: (value1, value2) => render(value1, value2),
+        }),
       p1,
       p2,
     ]
@@ -379,20 +369,13 @@ export function createRx2<O1, O2>(o1: Observable<O1>, o2: Observable<O2>) {
  * @returns The rendering function and the observable that represents the current value.
  */
 export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3: Observable<O3>) {
+  class Comp extends RxComp3<O1, O2, O3> {}
   return function(life: Observable<any>) {
     const [p1, c1] = rememberLast(o1)
     const [p2, c2] = rememberLast(o2)
     const [p3, c3] = rememberLast(o3)
 
-    if (c1 !== noop || c2 !== noop || c3 !== noop) {
-      life.subscribe({
-        complete() {
-          c1()
-          c2()
-          c3()
-        },
-      })
-    }
+    completeIf(life, c1, c2, c3)
 
     const ret: [
       (render: (o1: O1, o2: O2, o3: O3) => ReactNode) => ReactNode,
@@ -400,19 +383,13 @@ export function createRx3<O1, O2, O3>(o1: Observable<O1>, o2: Observable<O2>, o3
       Observable<O2>,
       Observable<O3>,
     ] = [
-      function(render: (o1: O1, o2: O2, o3: O3) => ReactNode) {
-        return React.createElement(RxComp, {
+      (render: (o1: O1, o2: O2, o3: O3) => ReactNode) =>
+        React.createElement(Comp, {
           o1: p1,
           o2: p2,
           o3: p3,
-          render(s: any) {
-            if (!('o1' in s) || !('o2' in s) || !('o3' in s)) {
-              return null
-            }
-            return render(s.o1, s.o2, s.o3)
-          },
-        })
-      },
+          render: (value1, value2, value3) => render(value1, value2, value3),
+        }),
       p1,
       p2,
       p3,
