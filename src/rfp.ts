@@ -84,6 +84,8 @@ export interface VdomStreamWithEffects {
  *
  * @returns The component type.
  */
+const emptyEffects: Effect[] = []
+
 export function createRxComponent<Props>(
   toVdomStream: (props: Observable<Props>) => VdomStream | VdomStreamWithEffects,
 ): React.ComponentType<Props> {
@@ -94,27 +96,16 @@ export function createRxComponent<Props>(
   class ComponentFromStream extends React.Component<Props, IState> {
     private readonly props$: BehaviorSubject<Props>
     private subscriptions: Subscription[]
+    private didMount: boolean = false
 
     constructor(props: Props) {
       super(props)
       this.state = { vdom: null }
-      this.subscriptions = []
       this.props$ = new BehaviorSubject(props)
-    }
 
-    UNSAFE_componentWillReceiveProps(nextProps: Props) {
-      this.props$.next(nextProps)
-    }
-
-    // @ts-ignore
-    shouldComponentUpdate(nextProps: Props, nextState: IState) {
-      return nextState.vdom !== this.state.vdom
-    }
-
-    UNSAFE_componentWillMount() {
       const ret = toVdomStream(this.props$.pipe(distinctUntilChanged(compareProps)))
 
-      const { vdom, effects } = (function() {
+      const { vdom, effects = emptyEffects } = (function() {
         if ('vdom' in ret) {
           return ret as VdomStreamWithEffects
         } else {
@@ -124,16 +115,27 @@ export function createRxComponent<Props>(
         }
       })()
 
-      this.subscriptions.push(
+      this.subscriptions = [
         vdom.subscribe(v => {
-          this.setState({ vdom: v })
+          if (this.didMount) {
+            this.setState({ vdom: v })
+          } else {
+            this.state = { vdom: v }
+          }
         }),
-      )
+      ].concat(effects.map(e => e()))
+    }
 
-      if (Array.isArray(effects)) {
-        const subscriptions = effects.map(e => e())
-        this.subscriptions.push.apply(this.subscriptions, subscriptions)
-      }
+    componentDidMount() {
+      this.didMount = true
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: Props) {
+      this.props$.next(nextProps)
+    }
+
+    shouldComponentUpdate(_nextProps: Props, nextState: IState) {
+      return nextState.vdom !== this.state.vdom
     }
 
     componentWillUnmount() {

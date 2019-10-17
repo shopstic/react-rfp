@@ -11,7 +11,7 @@ interface IValue<T> {
 
 export interface IRxComp1Props<T> {
   render: (value1: T) => ReactNode
-  o1?: Observable<T>
+  o1: Observable<T>
 }
 
 interface IRxComp1State<T> {
@@ -24,8 +24,8 @@ interface IRxComp1Subscription {
 
 export interface IRxComp2Props<T1, T2> {
   render: (value1: T1, value2: T2) => ReactNode
-  o1?: Observable<T1>
-  o2?: Observable<T2>
+  o1: Observable<T1>
+  o2: Observable<T2>
 }
 
 interface IRxComp2State<T1, T2> extends IRxComp1State<T1> {
@@ -38,9 +38,9 @@ interface IRxComp2Subscription extends IRxComp1Subscription {
 
 export interface IRxComp3Props<T1, T2, T3> {
   render: (value1: T1, value2: T2, value3: T3) => ReactNode
-  o1?: Observable<T1>
-  o2?: Observable<T2>
-  o3?: Observable<T3>
+  o1: Observable<T1>
+  o2: Observable<T2>
+  o3: Observable<T3>
 }
 
 interface IRxComp3State<T1, T2, T3> extends IRxComp2State<T1, T2> {
@@ -59,21 +59,36 @@ const unsubscribeIf = (subscription: MaybeSubscription) => {
 
 const renewSub = <T>(
   fn: ValueSetter<T>,
-  next: MaybeObservable<T>,
+  next: Observable<T>,
   current?: MaybeObservable<T>,
   currentSub?: MaybeSubscription,
 ): MaybeSubscription => {
   if (current === next) {
-    return
+    return currentSub
   }
 
   unsubscribeIf(currentSub)
   return next ? next.subscribe(fn) : undefined
 }
 
-const makeValue = <T>(value: T): IValue<T> => ({
-  value,
-})
+const makeSetter = <
+  TKey extends keyof TState,
+  TValue,
+  TState,
+  TPropValue extends TState[TKey] & IValue<TValue>
+>(
+  key: TKey,
+  comp: React.Component<any, TState>,
+): ValueSetter<TValue> => (value: TValue) => {
+  comp.setState(prevState => {
+    return {
+      ...prevState,
+      [key]: {
+        value,
+      } as TPropValue,
+    }
+  })
+}
 
 const valueEquals = <T>(value1?: IValue<T>, value2?: IValue<T>): boolean =>
   value1 && value2 ? value1.value === value2.value : !value1 && !value2
@@ -85,15 +100,12 @@ export class RxComp1<T> extends React.Component<IRxComp1Props<T>, IRxComp1State<
 
   constructor(props: IRxComp1Props<T>) {
     super(props)
-    this.setValue1 = v =>
-      this.setState({
-        value1: makeValue(v),
-      })
+    this.setValue1 = makeSetter('value1', this)
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps: IRxComp1Props<T>) {
+  componentDidUpdate(prevProps: IRxComp1Props<T>) {
     const s = this.subscriptions
-    s.o1 = renewSub(this.setValue1, nextProps.o1, this.props.o1, s.o1)
+    s.o1 = renewSub(this.setValue1, this.props.o1, prevProps.o1, s.o1)
   }
 
   componentDidMount() {
@@ -125,21 +137,14 @@ export class RxComp2<T1, T2> extends React.Component<IRxComp2Props<T1, T2>, IRxC
 
   constructor(props: IRxComp2Props<T1, T2>) {
     super(props)
-    this.setValue1 = v =>
-      this.setState({
-        value1: makeValue(v),
-      })
-
-    this.setValue2 = v =>
-      this.setState({
-        value2: makeValue(v),
-      })
+    this.setValue1 = makeSetter('value1', this)
+    this.setValue2 = makeSetter('value2', this)
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps: IRxComp2Props<T1, T2>) {
+  componentDidUpdate(prevProps: IRxComp2Props<T1, T2>) {
     const s = this.subscriptions
-    s.o1 = renewSub(this.setValue1, nextProps.o1, this.props.o1, s.o1)
-    s.o2 = renewSub(this.setValue2, nextProps.o2, this.props.o2, s.o2)
+    s.o1 = renewSub(this.setValue1, this.props.o1, prevProps.o1, s.o1)
+    s.o2 = renewSub(this.setValue2, this.props.o2, prevProps.o2, s.o2)
   }
 
   componentDidMount() {
@@ -179,27 +184,16 @@ export class RxComp3<T1, T2, T3> extends React.Component<
 
   constructor(props: IRxComp3Props<T1, T2, T3>) {
     super(props)
-    this.setValue1 = v =>
-      this.setState({
-        value1: makeValue(v),
-      })
-
-    this.setValue2 = v =>
-      this.setState({
-        value2: makeValue(v),
-      })
-
-    this.setValue3 = v =>
-      this.setState({
-        value3: makeValue(v),
-      })
+    this.setValue1 = makeSetter('value1', this)
+    this.setValue2 = makeSetter('value2', this)
+    this.setValue3 = makeSetter('value3', this)
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps: IRxComp3Props<T1, T2, T3>) {
+  componentDidUpdate(prevProps: IRxComp3Props<T1, T2, T3>) {
     const s = this.subscriptions
-    s.o1 = renewSub(this.setValue1, nextProps.o1, this.props.o1, s.o1)
-    s.o2 = renewSub(this.setValue2, nextProps.o2, this.props.o2, s.o2)
-    s.o3 = renewSub(this.setValue3, nextProps.o3, this.props.o3, s.o3)
+    s.o1 = renewSub(this.setValue1, this.props.o1, prevProps.o1, s.o1)
+    s.o2 = renewSub(this.setValue2, this.props.o2, prevProps.o2, s.o2)
+    s.o3 = renewSub(this.setValue3, this.props.o3, prevProps.o3, s.o3)
   }
 
   componentDidMount() {
