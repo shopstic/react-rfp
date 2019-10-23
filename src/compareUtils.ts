@@ -27,7 +27,7 @@ export function deepEquals(value1: any, value2: any): boolean {
   }
 
   if (v1Type === 'object') {
-    if (isDate(origin)) {
+    if (isDate(value1)) {
       return isDate(value2) ? value1.getTime() === value2.getTime() : false
     }
 
@@ -49,7 +49,7 @@ export function deepEquals(value1: any, value2: any): boolean {
 
     return true
   } else {
-    return origin === value2
+    return value1 === value2
   }
 }
 
