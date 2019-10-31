@@ -16,10 +16,14 @@ export function observeSize(...nodes: Element[]) {
       })
     })
 
-    nodes.forEach(ro.observe, ro)
+    for (const n of nodes) {
+      ro.observe(n)
+    }
 
     return () => {
-      nodes.forEach(ro.unobserve, ro)
+      for (const n of nodes) {
+        ro.unobserve(n)
+      }
     }
   })
 }
